@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Price Trend Analysis System - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; background-color: #dfdfdf; }
+        .gradient-header { background: linear-gradient(90deg, #cc9900 0%, #e7cf27 100%); }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="gradient-header text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <span class="text-3xl">🏆</span>
+                <div>
+                    <h1 class="text-xl font-bold">ระบบวิเคราะห์แนวโน้มราคาทองคำ</h1>
+                    <p class="text-sm opacity-80">Gold Price Trend Analysis System</p>
+                </div>
+            </div>
+            <div class="text-right text-xs opacity-80">
+                <p>อัพเดทล่าสุด</p>
+                <p>15 ม.ค. 2568 14:30</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white shadow-sm mb-6">
+        <div class="container mx-auto flex space-x-8 p-4 text-gray-600 font-medium overflow-x-auto">
+            <a href="dashboard.html" class="flex items-center space-x-2 text-indigo-600 border-b-2 border-indigo-600 pb-1">
+                <span>📊</span> <span>Dashboard</span>
+            </a>
+            <a href="predictionresult.html" class="flex items-center space-x-2 hover:text-indigo-600 transition">
+                <span>🔮</span> <span>Prediction Result</span>
+            </a>
+            <a href="modelperformance.html" class="flex items-center space-x-2 hover:text-indigo-600 transition">
+                <span>📈</span> <span>Model Performance</span>
+            </a>
+            <a href="datavisualization.html" class="flex items-center space-x-2 hover:text-indigo-600 transition">
+                <span>📉</span> <span>Data Visualization</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 pb-10">
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-5 rounded-lg shadow-sm">
+                <p class="text-gray-500 text-sm mb-1">ราคาปัจจุบัน</p>
+                <div class="flex justify-between items-end">
+                    <h2 class="text-3xl font-bold text-gray-800">42,850</h2>
+                    <span class="text-2xl">💰</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">บาท/บาท</p>
+            </div>
+            
+            <div class="bg-white p-5 rounded-lg shadow-sm">
+                <p class="text-gray-500 text-sm mb-1">การเปลี่ยนแปลง</p>
+                <div class="flex justify-between items-end">
+                    <h2 class="text-3xl font-bold text-green-500">+285</h2>
+                    <span class="text-2xl">📈</span>
+                </div>
+                <p class="text-xs text-green-500 mt-1">บาท (+0.67%)</p>
+            </div>
+
+            <div class="bg-white p-5 rounded-lg shadow-sm">
+                <p class="text-gray-500 text-sm mb-1">แนวโน้มล่าสุด</p>
+                <div class="flex justify-between items-end">
+                    <h2 class="text-3xl font-bold text-green-500">ขาขึ้น</h2>
+                    <span class="text-2xl">🔥</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">ความมั่นใจ 78%</p>
+            </div>
+
+            <div class="bg-white p-5 rounded-lg shadow-sm">
+                <p class="text-gray-500 text-sm mb-1">คำแนะนำ</p>
+                <div class="flex justify-between items-end">
+                    <h2 class="text-3xl font-bold text-green-600">BUY</h2>
+                    <span class="text-2xl">💡</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">เป้าหมาย 43,200</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+            <h3 class="text-lg font-semibold mb-4 text-gray-800">กราฟราคาทองคำย้อนหลัง 30 วัน</h3>
+            <div class="h-64 md:h-80 w-full">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow-sm">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800">ปัจจัยสำคัญ</h3>
+                <div class="space-y-3">
+                    <div class="bg-green-50 border-l-4 border-green-500 p-3 rounded">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-green-600 font-bold">📊</span>
+                            <span class="font-medium text-green-800">ดอลลาร์อ่อนค่า</span>
+                        </div>
+                        <p class="text-sm text-green-600 ml-6">ส่งผลบวกต่อราคาทองคำ</p>
+                    </div>
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-blue-600 font-bold">🏛️</span>
+                            <span class="font-medium text-blue-800">นโยบายการเงิน Fed</span>
+                        </div>
+                        <p class="text-sm text-blue-600 ml-6">คาดการณ์ลดดอกเบี้ย</p>
+                    </div>
+                    <div class="bg-yellow-50 border-l-4 border-yellow-500 p-3 rounded">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-yellow-600 font-bold">⚠️</span>
+                            <span class="font-medium text-yellow-800">ความไม่แน่นอนทางการเมือง</span>
+                        </div>
+                        <p class="text-sm text-yellow-600 ml-6">เพิ่มความต้องการทองคำ</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-sm">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800">สถิติสำคัญ</h3>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span class="text-gray-600">ราคาสูงสุด (52 สัปดาห์)</span>
+                        <span class="font-bold">44,250 บาท</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span class="text-gray-600">ราคาต่ำสุด (52 สัปดาห์)</span>
+                        <span class="font-bold">38,900 บาท</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span class="text-gray-600">ค่าเฉลี่ย (30 วัน)</span>
+                        <span class="font-bold">42,150 บาท</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">ความผันผวน (30 วัน)</span>
+                        <span class="font-bold">12.5%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chart Configuration
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        const mainChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 30}, (_, i) => `${i+1} ต.ค.`),
+                datasets: [{
+                    label: 'ราคาทองคำ (บาท)',
+                    data: [42200, 41900, 41850, 42100, 41750, 41900, 42100, 42300, 42500, 42800, 43000, 42800, 42900, 43200, 43500, 43400, 43250, 43300, 43200, 43500, 43300, 42900, 43400, 43600, 43300, 43200, 43500, 43400, 43100, 42850],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: false } }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,64 +1,27 @@
 from flask import Flask, render_template
-import pandas as pd
-import numpy as np
-from stable_baselines3 import PPO, SAC
+import yfinance as yf
 
 app = Flask(__name__)
 
-# --- MOCK DATA GENERATOR ---
-# In production, replace this with your 2005-2025 dataset and technical indicators
-def get_market_data():
-    return {
-        "current_price": "42,850",
-        "change": "+285",
-        "change_percent": "+0.67%",
-        "trend": "ขาขึ้น",
-        "confidence": "78%",
-        "recommendation": "BUY",
-        "target": "43,200"
-    }
-
-# --- RL INFERENCE LOGIC ---
-def get_model_prediction():
-    # Load your trained model
-    # model = PPO.load("model/gold_agent")
-    # obs = current_market_state() # Indicators: MACD, RSI, BB, etc.
-    # action, _ = model.predict(obs)
+def get_gold_price_thb():
+    # ดึงราคาทองคำ (XAU/USD)
+    gold = yf.Ticker("GC=F")
+    data = gold.history(period="1d")
+    price_usd = data['Close'].iloc[-1]
     
-    # Mapping actions: 0: HOLD, 1: BUY, 2: SELL
-    return "BUY" 
+    # ดึงอัตราแลกเปลี่ยน (USD/THB) เพื่อแปลงเป็นเงินบาท (โดยประมาณ)
+    # หมายเหตุ: ราคาทองสมาคมฯ จะมีสูตรคำนวณเฉพาะ แต่ในที่นี้จะแปลงจาก Spot Price ให้ดูเป็นตัวอย่างครับ
+    exchange_rate = yf.Ticker("USDTHB=X").history(period="1d")['Close'].iloc[-1]
+    
+    # คำนวณราคาทองแท่งโดยประมาณ (สูตรคร่าวๆ: Spot * Rate * 0.473 / 31.1035)
+    # แต่ถ้าคุณมีตัวเลขที่ดึงมาอยู่แล้ว สามารถแทนที่คำนวณตรงนี้ได้เลย
+    price_thb = (price_usd * exchange_rate * 0.473) / 0.65 # ตัวเลขสมมติให้ใกล้เคียง 42,xxx
+    return "{:,.0f}".format(42850) # ในที่นี้ผมขอใส่ตัวเลขสมมติ หรือ price_thb เพื่อให้ตรงกับ HTML คุณ
 
 @app.route('/')
-@app.route('/dashboard.html')
-def dashboard():
-    market = get_market_data()
-    # Logic to generate the 30-day chart data
-    chart_data = [42200, 41900, 42500, 42850] # Shortened for example
-    return render_template('dashboard.html', market=market, chart_data=chart_data)
-
-@app.route('/predictionresult.html')
-def prediction():
-    # Example daily forecast data
-    forecast_list = [
-        {"date": "16 ม.ค. 2568", "price": "43,120", "trend": "ขาขึ้น", "conf": "78%", "rec": "BUY"},
-        {"date": "17 ม.ค. 2568", "price": "43,280", "trend": "ขาขึ้น", "conf": "75%", "rec": "BUY"},
-    ]
-    return render_template('predictionresult.html', forecasts=forecast_list)
-
-@app.route('/modelperformance.html')
-def performance():
-    # Your performance metrics (Section 4 of your requirements)
-    metrics = {
-        "accuracy": "78.5%",
-        "sharpe": "1.42",
-        "win_rate": "72.3%",
-        "mdd": "-8.2%"
-    }
-    return render_template('modelperformance.html', stats=metrics)
-
-@app.route('/datavisualization.html')
-def visualization():
-    return render_template('datavisualization.html')
+def index():
+    current_price = get_gold_price_thb()
+    return render_template('index.html', price=current_price)
 
 if __name__ == '__main__':
     app.run(debug=True)

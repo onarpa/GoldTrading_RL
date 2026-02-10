@@ -48,127 +48,192 @@
     </div>
 
     <div class="container mx-auto px-4 pb-10">
-        
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white p-5 rounded-lg shadow-sm">
-                <p class="text-gray-500 text-sm mb-1">ราคาปัจจุบัน</p>
-                <div class="flex justify-between items-end">
-                    <h2 class="text-3xl font-bold text-gray-800">42,850</h2>
-                    <span class="text-2xl"></span>
-                </div>
-                <p class="text-xs text-gray-400 mt-1">บาท/บาท</p>
+        <div class="container mx-auto px-4 mb-4">
+            <div class="bg-white rounded-lg shadow-sm inline-flex overflow-hidden">
+                <button onclick="selectGold('bar965', this)"
+                    class="gold-tab px-6 py-3 text-sm font-medium border-r bg-indigo-600 text-white">
+                    ทองคำแท่ง 96.5%
+                </button>
+                <button onclick="selectGold('ornament965', this)"
+                    class="gold-tab px-6 py-3 text-sm font-medium border-r hover:bg-gray-100">
+                    ทองรูปพรรณ 96.5%
+                </button>
             </div>
-            
-            <div class="bg-white p-5 rounded-lg shadow-sm">
-                <p class="text-gray-500 text-sm mb-1">การเปลี่ยนแปลง</p>
-                <div class="flex justify-between items-end">
-                    <h2 class="text-3xl font-bold text-green-500">+285</h2>
-                    <span class="text-2xl"></span>
-                </div>
-                <p class="text-xs text-green-500 mt-1">บาท (+0.67%)</p>
-            </div>
+        </div>
 
-            <div class="bg-white p-5 rounded-lg shadow-sm">
-                <p class="text-gray-500 text-sm mb-1">แนวโน้มล่าสุด</p>
-                <div class="flex justify-between items-end">
+        <div class="container mx-auto px-4 pb-10">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+
+                <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <p class="text-gray-500 text-sm">รับซื้อ</p>
+                    <h2 id="buyPrice" class="text-3xl font-bold">74,700.00</h2>
+                    <p id="priceUnit" class="text-xs text-gray-400">บาท</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <p class="text-gray-500 text-sm">ขายออก</p>
+                    <h2 id="sellPrice" class="text-3xl font-bold">74,800.00</h2>
+                    <p id="priceUnit" class="text-xs text-gray-400">บาท</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <p class="text-gray-500 text-sm">การเปลี่ยนแปลง</p>
+                    <h2 id="priceChange" class="text-3xl font-bold text-green-500">+285</h2>
+                    <p id="pricePercent" class="text-xs text-green-500">บาท (+0.67%)</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <p class="text-gray-500 text-sm">แนวโน้ม</p>
                     <h2 class="text-3xl font-bold text-green-500">ขาขึ้น</h2>
-                    <span class="text-2xl"></span>
+                    <p class="text-xs text-gray-400">ความมั่นใจ 78%</p>
                 </div>
-                <p class="text-xs text-gray-400 mt-1">ความมั่นใจ 78%</p>
+
+                <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <p class="text-gray-500 text-sm">คำแนะนำ</p>
+                    <h2 id="recommendation" class="text-3xl font-bold text-green-600">BUY</h2>
+                    <p id="targetPrice" class="text-xs text-gray-400">เป้าหมาย 75,500.00</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-lg shadow-sm">
+                    <p class="text-gray-500 text-sm">ส่วนต่าง Buy–Sell</p>
+                    <h2 id="spread" class="text-3xl font-bold"></h2>
+                    <p class="text-xs text-gray-400">บาท</p>
+                </div>
+
             </div>
 
-            <div class="bg-white p-5 rounded-lg shadow-sm">
-                <p class="text-gray-500 text-sm mb-1">คำแนะนำ</p>
-                <div class="flex justify-between items-end">
-                    <h2 class="text-3xl font-bold text-green-600">BUY</h2>
-                    <span class="text-2xl"></span>
+            <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                <h3 class="text-lg font-semibold mb-4">กราฟราคาทองคำย้อนหลัง 30 วัน</h3>
+                <div class="h-72">
+                    <canvas id="mainChart"></canvas>
                 </div>
-                <p class="text-xs text-gray-400 mt-1">เป้าหมาย 43,200</p>
             </div>
+
         </div>
-
-        <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
-            <h3 class="text-lg font-semibold mb-4 text-gray-800">กราฟราคาทองคำย้อนหลัง 30 วัน</h3>
-            <div class="h-64 md:h-80 w-full">
-                <canvas id="mainChart"></canvas>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-lg shadow-sm">
-                <h3 class="text-lg font-semibold mb-4 text-gray-800">ปัจจัยสำคัญ</h3>
-                <div class="space-y-3">
-                    <div class="bg-green-50 border-l-4 border-green-500 p-3 rounded">
-                        <div class="flex items-center space-x-2">
-                            <span class="text-green-600 font-bold">📊</span>
-                            <span class="font-medium text-green-800">ดอลลาร์อ่อนค่า</span>
-                        </div>
-                        <p class="text-sm text-green-600 ml-6">ส่งผลบวกต่อราคาทองคำ</p>
-                    </div>
-                    <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
-                        <div class="flex items-center space-x-2">
-                            <span class="text-blue-600 font-bold">🏛️</span>
-                            <span class="font-medium text-blue-800">นโยบายการเงิน Fed</span>
-                        </div>
-                        <p class="text-sm text-blue-600 ml-6">คาดการณ์ลดดอกเบี้ย</p>
-                    </div>
-                    <div class="bg-yellow-50 border-l-4 border-yellow-500 p-3 rounded">
-                        <div class="flex items-center space-x-2">
-                            <span class="text-yellow-600 font-bold">⚠️</span>
-                            <span class="font-medium text-yellow-800">ความไม่แน่นอนทางการเมือง</span>
-                        </div>
-                        <p class="text-sm text-yellow-600 ml-6">เพิ่มความต้องการทองคำ</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-lg shadow-sm">
-                <h3 class="text-lg font-semibold mb-4 text-gray-800">สถิติสำคัญ</h3>
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center border-b pb-2">
-                        <span class="text-gray-600">ราคาสูงสุด (52 สัปดาห์)</span>
-                        <span class="font-bold">44,250 บาท</span>
-                    </div>
-                    <div class="flex justify-between items-center border-b pb-2">
-                        <span class="text-gray-600">ราคาต่ำสุด (52 สัปดาห์)</span>
-                        <span class="font-bold">38,900 บาท</span>
-                    </div>
-                    <div class="flex justify-between items-center border-b pb-2">
-                        <span class="text-gray-600">ค่าเฉลี่ย (30 วัน)</span>
-                        <span class="font-bold">42,150 บาท</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-600">ความผันผวน (30 วัน)</span>
-                        <span class="font-bold">12.5%</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script>
-        // Chart Configuration
-        const ctx = document.getElementById('mainChart').getContext('2d');
-        const mainChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: Array.from({length: 30}, (_, i) => `${i+1} ต.ค.`),
-                datasets: [{
-                    label: 'ราคาทองคำ (บาท)',
-                    data: [42200, 41900, 41850, 42100, 41750, 41900, 42100, 42300, 42500, 42800, 43000, 42800, 42900, 43200, 43500, 43400, 43250, 43300, 43200, 43500, 43300, 42900, 43400, 43600, 43300, 43200, 43500, 43400, 43100, 42850],
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: false } }
-            }
+    const goldData = {
+        bar965: {
+            buyPrice: 74700.00,
+            sellPrice: 74800.00,
+            change: "+285.00",
+            percent: "(+0.67%)",
+            recommend: "BUY",
+            target: "75500.00",
+            chart: [
+                42200,41900,41850,42100,41750,41900,42100,42300,42500,42800,
+                43000,42800,42900,43200,43500,43400,43250,43300,43200,43500,
+                43300,42900,43400,43600,43300,43200,43500,43400,43100,42850
+            ]
+        },
+        ornament965: {
+            buyPrice: 73207.64,
+            sellPrice:  75600.00,
+            change: "+310.00",
+            percent: "(+0.72%)",
+            recommend: "HOLD",
+            target: "76800.00",
+            chart: [
+                43200,43000,42900,43100,42800,43000,43200,43400,43600,43900,
+                44100,43900,44000,44300,44600,44500,44350,44400,44300,44600,
+                44400,44000,44500,44700,44400,44300,44600,44500,44200,43950
+            ]
+        }
+    };
+
+    // ===== Chart Init =====
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    const mainChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array.from({ length: 30 }, (_, i) => `วัน ${i + 1}`),
+            datasets: [{
+                data: goldData.bar965.chart,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59,130,246,0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // Change Gold Type 
+    function selectGold(type, btn) {
+        const d = goldData[type];
+
+        document.getElementById("buyPrice").innerText =
+            d.buyPrice.toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+        document.getElementById("sellPrice").innerText =
+            d.sellPrice.toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+        document.getElementById("priceChange").innerText = d.change;
+        document.getElementById("pricePercent").innerText = "บาท " + d.percent;
+        document.getElementById("recommendation").innerText = d.recommend;
+        document.getElementById("targetPrice").innerText = "เป้าหมาย " + d.target;
+
+        mainChart.data.datasets[0].data = d.chart;
+        mainChart.update();
+
+        document.querySelectorAll(".gold-tab").forEach(b => {
+            b.classList.remove("bg-indigo-600", "text-white");
+            b.classList.add("hover:bg-gray-100");
         });
+        btn.classList.add("bg-indigo-600", "text-white");
+    }
+    // การเปลี่ยนแปลงของราคาทองคำ 
+    function updateChange(changeValue) {
+        const el = document.getElementById("priceChange");
+        const percent = document.getElementById("pricePercent");
+
+        const sign = changeValue >= 0 ? "+" : "";
+        el.innerText = sign + changeValue.toFixed(2);
+
+        if (changeValue >= 0) {
+            el.className = "text-3xl font-bold text-green-500";
+            percent.className = "text-xs text-green-500";
+        } else {
+            el.className = "text-3xl font-bold text-red-500";
+            percent.className = "text-xs text-red-500";
+        }
+    }
+    // แนวโน้ม
+    function updateTrend(change) {
+        const el = document.getElementById("trendText");
+
+        if (change >= 0) {
+            el.innerHTML = "ขาขึ้น 🔺";
+            el.className = "text-3xl font-bold text-green-500";
+        } else {
+            el.innerHTML = "ขาลง 🔻";
+            el.className = "text-3xl font-bold text-red-500";
+        }
+    }
+    // Buy/Hold/Sell
+    function updateRecommendation(rec) {
+        const el = document.getElementById("recommendation");
+
+        el.innerText = rec;
+
+        if (rec === "BUY") {
+            el.className = "text-3xl font-bold text-green-600";
+        } else if (rec === "HOLD") {
+            el.className = "text-3xl font-bold text-yellow-500";
+        } else if (rec === "SELL") {
+            el.className = "text-3xl font-bold text-red-600";
+        }
+    }
+    // ส่วนต่าง Buy-Sell
+    function updateSpread(buy, sell) {
+        document.getElementById("spread").innerText =
+            (sell - buy).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    }
     </script>
+
 </body>
 </html>

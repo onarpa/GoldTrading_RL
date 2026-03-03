@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 export default function Layout({ children, activePage }) {
   return (
@@ -19,21 +20,33 @@ export default function Layout({ children, activePage }) {
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation (อัปเดตใช้ Link ของ React Router) */}
       <div className="bg-white shadow-sm mb-6">
         <div className="container mx-auto flex space-x-8 p-4 text-gray-600 font-medium overflow-x-auto">
-          <a href="/dashboard" className={`flex items-center space-x-2 pb-1 ${activePage === 'dashboard' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'hover:text-indigo-600 transition'}`}>
+          <Link 
+            to="/dashboard" 
+            className={`flex items-center space-x-2 pb-1 ${activePage === 'dashboard' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'hover:text-indigo-600 transition'}`}
+          >
             <span>Dashboard</span>
-          </a>
-          <a href="/prediction" className={`flex items-center space-x-2 pb-1 ${activePage === 'prediction' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'hover:text-indigo-600 transition'}`}>
+          </Link>
+          <Link 
+            to="/prediction" 
+            className={`flex items-center space-x-2 pb-1 ${activePage === 'prediction' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'hover:text-indigo-600 transition'}`}
+          >
             <span>Prediction Result</span>
-          </a>
-          <a href="/performance" className={`flex items-center space-x-2 pb-1 ${activePage === 'performance' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'hover:text-indigo-600 transition'}`}>
+          </Link>
+          <Link 
+            to="/performance" 
+            className={`flex items-center space-x-2 pb-1 ${activePage === 'performance' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'hover:text-indigo-600 transition'}`}
+          >
             <span>Model Performance</span>
-          </a>
-          <a href="/visualization" className={`flex items-center space-x-2 pb-1 ${activePage === 'visualization' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'hover:text-indigo-600 transition'}`}>
+          </Link>
+          <Link 
+            to="/visualization" 
+            className={`flex items-center space-x-2 pb-1 ${activePage === 'visualization' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'hover:text-indigo-600 transition'}`}
+          >
             <span>Data Visualization</span>
-          </a>
+          </Link>
         </div>
       </div>
 

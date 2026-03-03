@@ -1,42 +1,64 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { Line, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
-  LineElement, BarElement, Title, Tooltip, Filler
+  LineElement, BarElement, Title, Tooltip, Filler, Legend
 } from 'chart.js';
 
-// ลงทะเบียน Component ของ ChartJS (รวม BarElement สำหรับกราฟแท่ง)
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler);
+// ลงทะเบียน Component ของกราฟ (เพิ่ม BarElement สำหรับกราฟแท่ง)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler, Legend);
 
 export default function ModelPerformance() {
-  const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const [perfData, setPerfData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const returnChartData = {
-    labels: months,
+  // ดึงข้อมูลประสิทธิภาพโมเดลจาก API
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/api/model-performance')
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          setPerfData(data);
+        }
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error("Fetch Error:", error);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <Layout activePage="performance"><div className="flex justify-center items-center h-screen"><p className="animate-pulse text-xl text-gray-500 font-bold">กำลังประมวลผลประสิทธิภาพ AI...</p></div></Layout>;
+  if (!perfData) return <Layout activePage="performance"><div className="flex justify-center items-center h-screen"><p className="text-red-500 font-bold">ไม่สามารถดึงข้อมูลได้</p></div></Layout>;
+
+  // 1. ตั้งค่ากราฟผลตอบแทนสะสม (Cumulative Return) - กราฟเส้น
+  const cumulativeChartData = {
+    labels: perfData.cumulative_chart.labels,
     datasets: [{
-      label: 'Return',
-      data: [0, 2.2, 0.4, -0.2, -0.6, 3.3, 1.1, -1.0, 2.6, 4.0, 3.7, 5.8],
-      borderColor: '#10b981',
-      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+      label: 'ผลตอบแทนสะสม (%)',
+      data: perfData.cumulative_chart.data,
+      borderColor: '#8b5cf6', // สีม่วง
+      backgroundColor: 'rgba(139, 92, 246, 0.1)',
       fill: true,
       tension: 0.4
     }]
   };
 
+  // 2. ตั้งค่ากราฟผลงานรายเดือน (Monthly Performance) - กราฟแท่ง
   const monthlyChartData = {
-    labels: months,
+    labels: perfData.monthly_chart.labels,
     datasets: [{
-      label: 'Monthly %',
-      data: [2.1, -0.8, 3.5, 1.2, -1.5, 2.8, 0.9, 3.2, -0.5, 1.8, 3.8, 5.2],
-      backgroundColor: (context) => {
-        const value = context.dataset.data[context.dataIndex];
-        return value >= 0 ? '#10b981' : '#ef4444'; // สีเขียวถ้าบวก แดงถ้าลบ
-      }
+      label: 'ผลตอบแทนรายเดือน (%)',
+      data: perfData.monthly_chart.data,
+      // ถ้าค่าเป็นบวกให้เป็นสีเขียว ถ้าติดลบให้เป็นสีแดง
+      backgroundColor: perfData.monthly_chart.data.map(val => val >= 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)'),
+      borderRadius: 4
     }]
   };
 
-  const chartOptions = {
+  // Option ทั่วไปสำหรับกราฟ
+  const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } }
@@ -44,82 +66,85 @@ export default function ModelPerformance() {
 
   return (
     <Layout activePage="performance">
-      <div className="container mx-auto px-4 pb-10">
+      <div className="container mx-auto px-4 pb-10 mt-6">
         
-        {/* Metric Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-5 rounded-lg shadow-sm">
-            <p className="text-gray-500 text-xs uppercase">Accuracy</p>
-            <h2 className="text-3xl font-bold text-green-500">78.5%</h2>
-            <p className="text-xs text-gray-400">ความแม่นยำโมเดล</p>
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">ประสิทธิภาพของโมเดล (Model Performance)</h2>
+          <p className="text-gray-500">ผลการทดสอบย้อนหลังของโมเดล Reinforcement Learning (PPO)</p>
+        </div>
+
+        {/* 1. สถิติสำคัญ 4 กล่อง (Cards) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white p-5 rounded-lg shadow-sm border-t-4 border-blue-500">
+            <p className="text-gray-500 text-sm">ความแม่นยำ (Accuracy)</p>
+            <h2 className="text-3xl font-bold text-blue-600">{perfData.metrics.accuracy}%</h2>
           </div>
-          <div className="bg-white p-5 rounded-lg shadow-sm">
-            <p className="text-gray-500 text-xs uppercase">Sharpe Ratio</p>
-            <h2 className="text-3xl font-bold text-blue-500">1.42</h2>
-            <p className="text-xs text-gray-400">อัตราส่วนความเสี่ยง</p>
+          <div className="bg-white p-5 rounded-lg shadow-sm border-t-4 border-purple-500">
+            <p className="text-gray-500 text-sm">อัตราส่วนผลตอบแทนต่อความเสี่ยง (Sharpe Ratio)</p>
+            <h2 className="text-3xl font-bold text-purple-600">{perfData.metrics.sharpe_ratio}</h2>
           </div>
-          <div className="bg-white p-5 rounded-lg shadow-sm">
-            <p className="text-gray-500 text-xs uppercase">Win Rate</p>
-            <h2 className="text-3xl font-bold text-purple-500">72.3%</h2>
-            <p className="text-xs text-gray-400">อัตราการชนะ</p>
+          <div className="bg-white p-5 rounded-lg shadow-sm border-t-4 border-green-500">
+            <p className="text-gray-500 text-sm">อัตราการชนะ (Win Rate)</p>
+            <h2 className="text-3xl font-bold text-green-600">{perfData.metrics.win_rate}%</h2>
           </div>
-          <div className="bg-white p-5 rounded-lg shadow-sm">
-            <p className="text-gray-500 text-xs uppercase">Max Drawdown</p>
-            <h2 className="text-3xl font-bold text-red-500">-8.2%</h2>
-            <p className="text-xs text-gray-400">การสูญเสียสูงสุด</p>
+          <div className="bg-white p-5 rounded-lg shadow-sm border-t-4 border-red-500">
+            <p className="text-gray-500 text-sm">การสูญเสียสูงสุด (Max Drawdown)</p>
+            <h2 className="text-3xl font-bold text-red-600">{perfData.metrics.max_drawdown}%</h2>
           </div>
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* 2. กราฟ 2 ตัว (เรียงซ้ายขวาในจอคอม) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* กราฟ Cumulative */}
           <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-sm font-semibold mb-4 text-gray-800">Cumulative Return</h3>
-            <div className="h-64"><Line data={returnChartData} options={chartOptions} /></div>
+            <h3 className="text-lg font-bold mb-4 text-gray-800">ผลตอบแทนสะสม (Cumulative Return)</h3>
+            <div className="h-64">
+              <Line data={cumulativeChartData} options={commonOptions} />
+            </div>
           </div>
+          
+          {/* กราฟ Monthly */}
           <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-sm font-semibold mb-4 text-gray-800">Monthly Performance</h3>
-            <div className="h-64"><Bar data={monthlyChartData} options={chartOptions} /></div>
+            <h3 className="text-lg font-bold mb-4 text-gray-800">ผลตอบแทนรายเดือน (Monthly Return)</h3>
+            <div className="h-64">
+              <Bar data={monthlyChartData} options={commonOptions} />
+            </div>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">สถิติประสิทธิภาพรายเดือน</h3>
-          <table className="w-full text-left">
-            <thead className="text-xs text-gray-400 uppercase border-b">
-              <tr>
-                <th className="py-3">เดือน</th>
-                <th className="py-3">Return (%)</th>
-                <th className="py-3">Accuracy (%)</th>
-                <th className="py-3">Win Rate (%)</th>
-                <th className="py-3">Trades</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm text-gray-600">
-              <tr className="border-b">
-                <td className="py-3">ม.ค. 2569</td>
-                <td className="text-green-500 font-medium">+5.2%</td>
-                <td>82.1%</td>
-                <td>75.0%</td>
-                <td>24</td>
-              </tr>
-              <tr className="border-b">
-                <td className="py-3">ธ.ค. 2568</td>
-                <td className="text-green-500 font-medium">+3.8%</td>
-                <td>79.3%</td>
-                <td>71.4%</td>
-                <td>21</td>
-              </tr>
-              <tr>
-                <td className="py-3">พ.ย. 2568</td>
-                <td className="text-red-500 font-medium">-1.5%</td>
-                <td>74.2%</td>
-                <td>68.2%</td>
-                <td>22</td>
-              </tr>
-            </tbody>
-          </table>
+        {/* 3. ตารางสถิติรายเดือน */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="p-6 border-b">
+            <h3 className="text-lg font-bold text-gray-800">สถิติประสิทธิภาพรายเดือน (Monthly Statistics)</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50 text-gray-600 text-sm border-b">
+                  <th className="p-4 font-semibold">เดือน</th>
+                  <th className="p-4 font-semibold">Return (%)</th>
+                  <th className="p-4 font-semibold">Accuracy (%)</th>
+                  <th className="p-4 font-semibold">Win Rate (%)</th>
+                  <th className="p-4 font-semibold">Trades (ครั้ง)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {perfData.table_data.map((row, index) => (
+                  <tr key={index} className="border-b hover:bg-gray-50 transition">
+                    <td className="p-4 font-medium text-gray-800">{row.month}</td>
+                    <td className={`p-4 font-bold ${row.return >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {row.return >= 0 ? '+' : ''}{row.return}%
+                    </td>
+                    <td className="p-4 text-gray-700">{row.accuracy}%</td>
+                    <td className="p-4 text-gray-700">{row.win_rate}%</td>
+                    <td className="p-4 text-gray-700">{row.trades}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+
       </div>
     </Layout>
   );

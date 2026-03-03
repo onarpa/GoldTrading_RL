@@ -1,4 +1,4 @@
-fastapi[standard]
+fastapi
 pydantic
 sqlmodel
 dotenv

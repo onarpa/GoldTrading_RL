@@ -178,85 +178,73 @@ def get_model_performance():
 @app.get("/api/data-visualization")
 def get_data_visualization():
     try:
-        # 1. ดึงข้อมูล 1 ปี เพื่อให้คำนวณ Indicator ได้แม่นยำ 
+        # 1. ดึงข้อมูลจริง (แนะนำให้ดึงสัก 1 ปี เพื่อให้ EMA คำนวณได้ถูกต้องก่อน)
         end_date = datetime.now().strftime("%Y-%m-%d")
         start_date = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
         
         raw_df = fetch_historical_data(start_date=start_date, end_date=end_date)
         df = add_technical_indicators(raw_df)
         
-        # 2. คัดเอาเฉพาะ 20 วันทำการล่าสุดมาทำกราฟ
+        # 2. คัดเอาเฉพาะ 20 วันล่าสุดสำหรับวาดกราฟ
         recent_df = df.tail(20).copy()
         recent_df.reset_index(inplace=True)
         recent_df['Date'] = recent_df['Date'].astype(str)
         recent_df.fillna(0, inplace=True)
         
         data_records = recent_df.to_dict(orient="records")
+        if len(data_records) == 0:
+            return {"status": "error", "message": "No data available"}
+            
         latest = data_records[-1]
 
-        # 3. สร้างข้อมูลสำหรับการวิเคราะห์ (Analysis Logic)
-        
-        # Moving Average Analysis 
+        # 3. สร้างข้อความวิเคราะห์แบบ Real-time ตามเงื่อนไขของ Indicator
+        # MA Analysis 
         ma_analysis = {
             "title": "Moving Average",
-            "value_text": f"ราคาอยู่{'เหนือ' if latest['Close'] > latest['EMA_20'] else 'ใต้'} MA20",
-            "signal": "สัญญาณขาขึ้น" if latest['Close'] > latest['EMA_20'] and latest['Close'] > latest['EMA_50'] else ("สัญญาณขาลง" if latest['Close'] < latest['EMA_20'] and latest['Close'] < latest['EMA_50'] else "รอความชัดเจน"),
-            "color_theme": "green" if latest['Close'] > latest['EMA_20'] else "red"
+            "condition": f"ราคาอยู่{'เหนือ' if latest['Close'] > latest['EMA_20'] else 'ใต้'} MA20",
+            "signal": "สัญญาณขาขึ้น" if latest['Close'] > latest['EMA_20'] else "สัญญาณขาลง",
+            "theme": "green" if latest['Close'] > latest['EMA_20'] else "red"
         }
 
-        # RSI Analysis 
+        # RSI Analysis
         rsi_val = latest['RSI']
-        rsi_zone = "อยู่ในเขตกลาง"
-        rsi_signal = "รอความชัดเจน"
-        rsi_color = "yellow"
         if rsi_val > 70:
-            rsi_zone = "Overbought (ซื้อมากเกินไป)"
-            rsi_signal = "สัญญาณระวังขาย"
-            rsi_color = "red"
+            rsi_theme, rsi_signal, rsi_cond = "red", "Overbought", f"RSI = {round(rsi_val, 1)}"
         elif rsi_val < 30:
-            rsi_zone = "Oversold (ขายมากเกินไป)"
-            rsi_signal = "สัญญาณระวังซื้อ"
-            rsi_color = "green"
+            rsi_theme, rsi_signal, rsi_cond = "green", "Oversold", f"RSI = {round(rsi_val, 1)}"
+        else:
+            rsi_theme, rsi_signal, rsi_cond = "yellow", "อยู่ในเขตกลาง", f"RSI = {round(rsi_val, 1)}"
 
         rsi_analysis = {
             "title": "RSI",
-            "value_text": f"RSI = {round(rsi_val, 1)}",
-            "signal": rsi_zone,
-            "color_theme": rsi_color
+            "condition": rsi_cond,
+            "signal": rsi_signal,
+            "theme": rsi_theme
         }
 
         # MACD Analysis
         macd_val = latest['MACD']
-        macd_signal_line = latest['MACD_Signal']
-        
+        signal_val = latest['MACD_Signal']
         macd_analysis = {
             "title": "MACD",
-            "value_text": f"MACD {'เหนือ' if macd_val > macd_signal_line else 'ใต้'} Signal Line",
-            "signal": "สัญญาณบวก" if macd_val > macd_signal_line else "สัญญาณลบ",
-            "color_theme": "blue" if macd_val > macd_signal_line else "red"
+            "condition": f"MACD {'เหนือ' if macd_val > signal_val else 'ใต้'} Signal Line",
+            "signal": "สัญญาณบวก" if macd_val > signal_val else "สัญญาณลบ",
+            "theme": "blue" if macd_val > signal_val else "red"
         }
 
         return {
             "status": "success",
-            "labels": [record['Date'] for record in data_records],
-            "price_data": [round(record['Close'], 2) for record in data_records],
-            
-            # Indicator Data
-            "ma_data": {
-                "ma20": [round(record['EMA_20'], 2) for record in data_records],
-                "ma50": [round(record['EMA_50'], 2) for record in data_records] # เพิ่ม MA50 เข้าไปด้วยถ้าต้องการ
-            },
-            "rsi_data": [round(record['RSI'], 2) for record in data_records],
-            "macd_data": {
-                "macd": [round(record['MACD'], 2) for record in data_records],
-                "signal": [round(record['MACD_Signal'], 2) for record in data_records]
-            },
-            "bb_data": {
-                "upper": [round(record['BB_High'], 2) for record in data_records],
-                "lower": [round(record['BB_Low'], 2) for record in data_records]
-            },
-            
-            # Analysis Summary
+            # ข้อมูลแกน X
+            "labels": [r['Date'] for r in data_records],
+            # ข้อมูลแกน Y สำหรับกราฟต่างๆ
+            "price": [round(r['Close'], 2) for r in data_records],
+            "ma20": [round(r['EMA_20'], 2) for r in data_records],
+            "ma50": [round(r['EMA_50'], 2) for r in data_records], # ถ้ามี MA50
+            "rsi": [round(r['RSI'], 2) for r in data_records],
+            "macd": [round(r['MACD'], 2) for r in data_records],
+            "macd_signal": [round(r['MACD_Signal'], 2) for r in data_records],
+            "bb_upper": [round(r['BB_High'], 2) for r in data_records],
+            "bb_lower": [round(r['BB_Low'], 2) for r in data_records],
             "analysis": {
                 "ma": ma_analysis,
                 "rsi": rsi_analysis,

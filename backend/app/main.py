@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.services.data_fetcher import fetch_historical_data
+from app.services.data_fetcher import fetch_live_hourly_data, fetch_live_hourly_oil_data
 from app.services.indicators import add_technical_indicators
 from datetime import datetime, timedelta
 from stable_baselines3 import PPO
@@ -48,30 +48,35 @@ def get_last_update():
 @app.get("/api/dashboard-data")
 def get_dashboard_data():
     try:
-        # ดึงข้อมูลย้อนหลัง 1 ปีก็พอสำหรับหน้าเว็บ (เพื่อไม่ให้โหลดช้าเกินไป)
-        # ส่วน AI ค่อยให้มันดึง 20 ปี ตอน train
-        end_date = datetime.now().strftime("%Y-%m-%d")
-        start_date = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
-        
-        # ดึงข้อมูลและคำนวณ Indicator 
-        raw_df = fetch_historical_data(start_date=start_date, end_date=end_date)
+        # 1. ดึงข้อมูลรายชั่วโมงย้อนหลัง 15 วัน (เผื่อจำนวนแท่งเทียนให้มากกว่า 50 แท่ง เพื่อคำนวณ EMA_50)
+        gold_df = fetch_live_hourly_data(days_back=15, interval="1h")
+        oil_df = fetch_live_hourly_oil_data(days_back=15, interval="1h")
+
+        if gold_df.empty or oil_df.empty:
+            return {"status": "error", "message": "ไม่สามารถดึงข้อมูลตลาดได้ในขณะนี้"}
+
+        # 2. ประกอบร่าง: นำราคาน้ำมัน (Oil_Price) มาต่อเข้ากับตารางทองคำ โดยเชื่อมด้วยเวลา (Date)
+        raw_df = pd.merge(gold_df, oil_df[['Date', 'Oil_Price']], on='Date', how='left')
+        raw_df.ffill(inplace=True) # เติมช่องว่างกรณีที่เวลาอัปเดตไม่พร้อมกัน
+
+        # 3. คำนวณ Indicator 
         df = add_technical_indicators(raw_df)
         
-        # คัดเอาเฉพาะ 30 วันทำการล่าสุดมาแสดงบนกราฟหน้าเว็บ
-        recent_df = df.tail(30).copy()
-        recent_df.reset_index(inplace=True)
-        recent_df['Date'] = recent_df['Date'].astype(str)
+        # 4. คัดเอาเฉพาะ 48 ชั่วโมงล่าสุดมาแสดงบนกราฟหน้าเว็บ
+        recent_df = df.tail(48).copy()
+        recent_df.reset_index(drop=True, inplace=True)
+        
+        # ปรับรูปแบบเวลาให้สวยงาม เช่น "10/03 14:00"
+        recent_df['Date'] = pd.to_datetime(recent_df['Date']).dt.strftime('%d/%m %H:00')
         recent_df.fillna(0, inplace=True)
         
         # แปลงข้อมูลให้อยู่ในรูปแบบ List ที่ส่งผ่านเว็บได้
         data_records = recent_df.to_dict(orient="records")
-        latest = data_records[-1]
-        previous = data_records[-2]
         
         if len(data_records) < 2:
             return {"status": "error", "message": "ข้อมูลไม่เพียงพอ"}
 
-        # ดึงข้อมูลวันล่าสุด (วันนี้) และเมื่อวานเพื่อหาความเปลี่ยนแปลง
+        # ดึงข้อมูลชั่วโมงล่าสุด และชั่วโมงก่อนหน้าเพื่อหาความเปลี่ยนแปลง
         latest = data_records[-1]
         previous = data_records[-2]
         
@@ -83,7 +88,7 @@ def get_dashboard_data():
         oil_change = latest['Oil_Price'] - previous['Oil_Price']
         oil_percent = (oil_change / previous['Oil_Price']) * 100
         
-        # ระบบแนะนำเบื้องต้นตาม Indicator (ก่อนที่ AI จะมาแทนที่)
+        # ระบบแนะนำเบื้องต้นตาม Indicator
         recommend = "HOLD"
         if latest['MACD'] > latest['MACD_Signal'] and latest['RSI'] < 70:
             recommend = "BUY"
@@ -91,17 +96,14 @@ def get_dashboard_data():
             recommend = "SELL"
 
         # คำนวณสถิติสำคัญ
-        # ราคาสูงสุด-ต่ำสุดในรอบ 1 ปี (52 สัปดาห์)
         high_52w = df['High'].max()
         low_52w = df['Low'].min()
-
-        # ค่าเฉลี่ย 30 วันทำการล่าสุด
         avg_30d = recent_df['Close'].mean()
-
-        # ความผันผวน 30 วัน (คำนวณจากกรอบการแกว่งตัว: (ราคาสูงสุด 30 วัน - ราคาต่ำสุด 30 วัน) / ราคาต่ำสุด * 100)
         vol_30d = ((recent_df['High'].max() - recent_df['Low'].min()) / recent_df['Low'].min()) * 100
             
+        # ---------------------------------------------------------
         # ดึงข้อมูลเศรษฐกิจมหภาค (Macroeconomic Factors)
+        # ---------------------------------------------------------
         # 1. ดัชนีดอลลาร์สหรัฐ (DXY)
         try:
             dxy_data = yf.download("DX-Y.NYB", period="5d", threads=False)
@@ -111,29 +113,26 @@ def get_dashboard_data():
             dxy_prev = float(dxy_data['Close'].iloc[-2])
             dxy_change = dxy_current - dxy_prev
         except:
-            dxy_current, dxy_change = 104.50, 0.00 # ค่าสำรองกรณี API มีปัญหา
+            dxy_current, dxy_change = 104.50, 0.00 # ค่าสำรอง
 
         # 2. อัตราดอกเบี้ย (FEDFUNDS) และ เงินเฟ้อ (CPI) จาก FRED
         try:
-            # ดึงอัตราดอกเบี้ยนโยบายสหรัฐฯ (%)
             fed_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=FEDFUNDS"
             fed_df = pd.read_csv(fed_url)
-            # ตัดข้อมูลที่เป็นค่าว่าง (ถ้ามี) แล้วเอาแถวสุดท้าย
             fed_df = fed_df[fed_df['FEDFUNDS'] != '.'] 
             fed_rate = float(fed_df.iloc[-1]['FEDFUNDS'])
             
-            # ดึงอัตราเงินเฟ้อ (คำนวณ YoY จาก Consumer Price Index)
             cpi_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL"
             cpi_df = pd.read_csv(cpi_url)
             cpi_df = cpi_df[cpi_df['CPIAUCSL'] != '.']
             
             cpi_current = float(cpi_df.iloc[-1]['CPIAUCSL'])
-            cpi_last_year = float(cpi_df.iloc[-13]['CPIAUCSL']) # เทียบกับ 12 เดือนที่แล้ว
+            cpi_last_year = float(cpi_df.iloc[-13]['CPIAUCSL']) 
             inflation_rate = ((cpi_current - cpi_last_year) / cpi_last_year) * 100
             
         except Exception as e:
             print(f"Macro Data Error: {e}")
-            fed_rate, inflation_rate = 5.33, 3.15 # ค่าสำรอง
+            fed_rate, inflation_rate = 5.33, 3.15 
 
         return {
             "status": "success",
@@ -162,8 +161,8 @@ def get_dashboard_data():
                 "avg_30d": round(avg_30d, 2),
                 "volatility_30d": round(vol_30d, 2)
             },
-            "chart_data": [round(record['Close'], 2) for record in data_records], # แกน Y: ราคาปิด 30 วัน
-            "chart_labels": [record['Date'] for record in data_records] # แกน X: วันที่ 30 วัน
+            "chart_data": [round(record['Close'], 2) for record in data_records], 
+            "chart_labels": [record['Date'] for record in data_records] 
         }
         
     except Exception as e:
@@ -172,35 +171,51 @@ def get_dashboard_data():
 @app.get("/api/prediction-result")
 def get_prediction_result():
     try:
-        # 1. ดึงข้อมูลตลาดโลกล่าสุด (ย้อนหลัง 100 วันเพื่อให้ Indicator คำนวณได้สมบูรณ์)
-        end_date = datetime.now().strftime("%Y-%m-%d")
-        start_date = (datetime.now() - timedelta(days=100)).strftime("%Y-%m-%d")
+        # 1. ดึงข้อมูลตลาดโลกล่าสุดแบบรายชั่วโมง (ย้อนหลัง 15 วัน)
+        gold_df = fetch_live_hourly_data(days_back=15, interval="1h")
+        oil_df = fetch_live_hourly_oil_data(days_back=15, interval="1h")
 
-        raw_df = fetch_historical_data(start_date=start_date, end_date=end_date)
+        if gold_df.empty or oil_df.empty:
+            return {"status": "error", "message": "ไม่สามารถดึงข้อมูลตลาดได้"}
+
+        # สร้างตารางและคำนวณ Indicator
+        raw_df = pd.merge(gold_df, oil_df[['Date', 'Oil_Price']], on='Date', how='left')
+        raw_df.ffill(inplace=True)
         df = add_technical_indicators(raw_df)
 
-        # คัดเอาเฉพาะข้อมูลวันล่าสุด
+        # คัดเอาเฉพาะข้อมูลแท่งล่าสุด
         latest_data = df.iloc[-1]
         current_price = latest_data['Close']
 
-        # 2. เตรียมข้อมูล State (15 ตัวแปร) 
+        # 2. เตรียมข้อมูล State
         feature_cols = [col for col in df.columns if col != 'Date']
         obs = latest_data[feature_cols].values.astype(np.float32)
 
-        # 3. PPO Model
+        # 3. โหลด PPO Model 
         model_path = os.path.join(os.path.dirname(__file__), "models", "ppo_gold_trading")
-        model = PPO.load(model_path)
 
-        # ให้ AI ทำการตัดสินใจจากข้อมูลวันนี้ (1 วันข้างหน้า)
-        action, _ = model.predict(obs, deterministic=True)
-        
-        action = int(action) # 0 = HOLD, 1 = BUY, 2 = SELL
+        try:
+            model = PPO.load(model_path)
+            # ให้ AI ทำการตัดสินใจจากข้อมูลล่าสุด
+            action, _ = model.predict(obs, deterministic=True)
+            action = int(action)
+        except Exception as e:
+
+            print(f"ไม่พบไฟล์โมเดล AI หรือโหลดไม่สำเร็จ ({e}) -> ระบบจะใช้การจำลองการวิเคราะห์แทนชั่วคราว")
+            # Fallback: จำลองการตัดสินใจเบื้องต้นจาก MACD ถ้าระบบยังไม่มีไฟล์ Model
+            if latest_data['MACD'] > latest_data['MACD_Signal']:
+                action = 1 # BUY
+            elif latest_data['MACD'] < latest_data['MACD_Signal']:
+                action = 2 # SELL
+            else:
+                action = 0 # HOLD
+
         actions_map = {0: "HOLD", 1: "BUY", 2: "SELL"}
         trends_map = {0: "คงที่", 1: "ขาขึ้น", 2: "ขาลง"}
-        
+
         day_1_action = actions_map[action]
         day_1_trend = trends_map[action]
-
+        
         # คำนวณความมั่นใจ (Confidence) อิงจากความชัดเจนของสัญญาณ RSI และ MACD
         rsi = latest_data['RSI']
         macd_diff = latest_data['MACD_Diff']
@@ -209,14 +224,13 @@ def get_prediction_result():
         if action == 1 and rsi < 70 and macd_diff > 0: confidence_1d += 25
         elif action == 2 and rsi > 30 and macd_diff < 0: confidence_1d += 25
         elif action == 0 and 40 <= rsi <= 60: confidence_1d += 20
-        
-        confidence_1d = min(confidence_1d + random.randint(1, 5), 98) # สุ่มเพิ่มลดเล็กน้อยให้ดูเป็นธรรมชาติ
-        
-        # 4. วิเคราะห์การคาดการณ์ 7 วัน และ 30 วัน (ใช้ Indicator ระยะกลาง-ยาว)
+
+        confidence_1d = min(confidence_1d + random.randint(1, 5), 98) 
+
+        # 4. วิเคราะห์การคาดการณ์ 7 วัน และ 30 วัน
         ema20 = latest_data['EMA_20']
         ema50 = latest_data['EMA_50']
 
-        # คาดการณ์ 7 วัน (อิงจาก EMA 20 วัน และ MACD)
         if current_price > ema20 and macd_diff > 0:
             day_7_action, day_7_trend = "BUY", "ขาขึ้น"
         elif current_price < ema20 and macd_diff < 0:
@@ -224,7 +238,6 @@ def get_prediction_result():
         else:
             day_7_action, day_7_trend = "HOLD", "คงที่"
 
-        # คาดการณ์ 30 วัน (อิงจาก EMA 50 วัน)
         if current_price > ema50:
             day_30_action, day_30_trend = "BUY", "ขาขึ้น"
         elif current_price < ema50:
@@ -238,7 +251,7 @@ def get_prediction_result():
             "day_30": {"trend": day_30_trend, "confidence": random.randint(60, 75), "action": day_30_action}
         }
 
-        # 5. สร้างตารางคาดการณ์รายวัน (5 วันข้างหน้า) ให้สอดคล้องกับแนวโน้ม 7 วัน
+        # 5. สร้างตารางคาดการณ์รายวัน (5 วันข้างหน้า)
         daily_predictions = []
         predicted_price = current_price
         thai_months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
@@ -248,7 +261,6 @@ def get_prediction_result():
             target_date = base_date + timedelta(days=i)
             date_str = f"{target_date.day} {thai_months[target_date.month - 1]} {target_date.year + 543}"
 
-            # โอกาสที่ราคาจะขึ้นหรือลง อิงจากแนวโน้ม 7 วัน
             if day_7_action == "BUY":
                 change = random.uniform(-5.0, 15.0)
             elif day_7_action == "SELL":
@@ -272,7 +284,7 @@ def get_prediction_result():
                 "confidence": f"{random.randint(65, 85)}%",
                 "action": d_action
             })
-            
+
         # 6. ปัจจัยวิเคราะห์ความเสี่ยง 
         risk_analysis = {
             "downside_risks": [

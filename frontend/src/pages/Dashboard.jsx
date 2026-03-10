@@ -10,7 +10,6 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler);
 
 export default function Dashboard() {
-  const [selectedType, setSelectedType] = useState('bar');
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +34,7 @@ export default function Dashboard() {
     return (
       <Layout activePage="dashboard">
         <div className="flex justify-center items-center h-screen">
-          <p className="text-xl font-bold text-gray-500 animate-pulse">กำลังดึงข้อมูลตลาดโลกล่าสุด...</p>
+          <p className="text-xl font-bold text-gray-500 animate-pulse">กำลังดึงข้อมูลตลาดโลก XAU/USD...</p>
         </div>
       </Layout>
     );
@@ -45,7 +44,7 @@ export default function Dashboard() {
     return (
       <Layout activePage="dashboard">
         <div className="flex justify-center items-center h-screen">
-          <p className="text-xl font-bold text-red-500">ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาตรวจสอบ Backend</p>
+          <p className="text-xl font-bold text-red-500">ไม่สามารถเชื่อมต่อฐานข้อมูลได้</p>
         </div>
       </Layout>
     );
@@ -70,54 +69,39 @@ export default function Dashboard() {
     scales: { x: { ticks: { maxTicksLimit: 10 } } }
   };
 
-  // ส่วนคำนวณราคาจริงให้เป็น "รับซื้อ" และ "ขายออก"
-  // สำหรับทองรูปพรรณจำลองให้ราคาสูงกว่าแท่ง 50 USD
-  const priceOffset = selectedType === 'ornament' ? 50 : 0; 
-  const basePrice = apiData.current_price + priceOffset;
+  // ส่วนคำนวณราคา Bid/Ask สำหรับ XAUUSD (Gold Spot)
+  const basePrice = apiData.current_price;
   
-  // กำหนดส่วนต่าง (Spread) ของตลาดโลกประมาณ 0.50 USD ต่อฝั่ง
-  const spread = 0.50; 
-  const buyPrice = basePrice - spread; // ราคารับซื้อ
-  const sellPrice = basePrice + spread; // ราคาขายออก
+  // กำหนดส่วนต่าง (Spread) แบบสมจริงสำหรับโบรคเกอร์ Forex ทั่วไป (ประมาณ 0.30 USD)
+  const spread = 0.30; 
+  const bidPrice = basePrice - spread; // ราคา Bid (ราคาที่เรากด Sell ใส่โบรคเกอร์)
+  const askPrice = basePrice + spread; // ราคา Ask (ราคาที่เรากด Buy จากโบรคเกอร์)
 
   return (
     <Layout activePage="dashboard">
       <div className="container mx-auto px-4 pb-10 mt-6">
         
-        {/* Toggle ประเภททอง */}
-        <div className="mb-4">
-          <div className="bg-white rounded-lg shadow-sm inline-flex overflow-hidden border border-gray-200">
-            <button 
-              onClick={() => setSelectedType('bar')}
-              className={`px-6 py-3 text-sm font-medium border-r ${selectedType === 'bar' ? 'bg-indigo-600 text-white' : 'hover:bg-gray-100 text-gray-700'}`}>
-              ทองคำแท่ง (อ้างอิง USD)
-            </button>
-            <button 
-              onClick={() => setSelectedType('ornament')}
-              className={`px-6 py-3 text-sm font-medium ${selectedType === 'ornament' ? 'bg-indigo-600 text-white' : 'hover:bg-gray-100 text-gray-700'}`}>
-              ทองรูปพรรณ (อ้างอิง USD)
-            </button>
-          </div>
+        {/* หัวข้อ Dashboard */}
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">XAUUSD (Gold Spot)</h2>
         </div>
 
-        {/* ปรับ Grid เป็น 6 คอลัมน์ สำหรับรองรับรับซื้อ/ขายออก */}
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-          
-          {/* 1. ราคารับซื้อ */}
-          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
-            <p className="text-gray-500 text-xs xl:text-sm">ราคารับซื้อ (Bid)</p>
-            <h2 className="text-xl xl:text-2xl font-bold text-gray-800">{buyPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
+          {/* ราคารับซื้อ (Bid) */}
+          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-red-500">
+            <p className="text-gray-500 text-xs xl:text-sm">ราคา Bid (Sell)</p>
+            <h2 className="text-xl xl:text-2xl font-bold text-gray-800">{bidPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
             <p className="text-xs text-gray-400">USD</p>
           </div>
 
-          {/* 2. ราคาขายออก */}
-          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-indigo-500">
-            <p className="text-gray-500 text-xs xl:text-sm">ราคาขายออก (Ask)</p>
-            <h2 className="text-xl xl:text-2xl font-bold text-gray-800">{sellPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
+          {/* ราคาขายออก (Ask) */}
+          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500">
+            <p className="text-gray-500 text-xs xl:text-sm">ราคา Ask (Buy)</p>
+            <h2 className="text-xl xl:text-2xl font-bold text-gray-800">{askPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
             <p className="text-xs text-gray-400">USD</p>
           </div>
 
-          {/* 3. การเปลี่ยนแปลง */}
+          {/* การเปลี่ยนแปลง */}
           <div className="bg-white p-4 rounded-lg shadow-sm">
             <p className="text-gray-500 text-xs xl:text-sm">การเปลี่ยนแปลง</p>
             <h2 className={`text-xl xl:text-2xl font-bold ${apiData.price_change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -128,37 +112,75 @@ export default function Dashboard() {
             </p>
           </div>
 
-          {/* 4. Indicators */}
+          {/* Indicators */}
           <div className="bg-white p-4 rounded-lg shadow-sm">
-            <p className="text-gray-500 text-xs xl:text-sm">อินดิเคเตอร์</p>
+            <p className="text-gray-500 text-xs xl:text-sm">Indicator (1D)</p>
             <div className="text-xs xl:text-sm font-bold text-gray-800 mt-1">
               RSI: <span className={apiData.technical.rsi > 70 ? 'text-red-500' : apiData.technical.rsi < 30 ? 'text-green-500' : 'text-blue-500'}>{apiData.technical.rsi}</span><br/>
               MACD: <span className={apiData.technical.macd > 0 ? 'text-green-500' : 'text-red-500'}>{apiData.technical.macd}</span>
             </div>
           </div>
 
-          {/* 5. คำแนะนำ */}
-          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-yellow-400">
-            <p className="text-gray-500 text-xs xl:text-sm">คำแนะนำ</p>
+          {/* คำแนะนำ (Buy / Hold / Sell) */}
+          <div className={`bg-white p-4 rounded-lg shadow-sm border-l-4 ${apiData.recommendation === 'BUY' ? 'border-green-500' : apiData.recommendation === 'SELL' ? 'border-red-500' : 'border-yellow-400'}`}>
+            <p className="text-gray-500 text-xs xl:text-sm">แนวโน้มระบบ</p>
             <h2 className={`text-xl xl:text-2xl font-bold ${apiData.recommendation === 'BUY' ? 'text-green-600' : apiData.recommendation === 'SELL' ? 'text-red-600' : 'text-yellow-500'}`}>
               {apiData.recommendation}
             </h2>
           </div>
 
-          {/* 6. ราคาน้ำมัน */}
-          <div className="bg-gray-800 text-white p-4 rounded-lg shadow-sm">
-            <p className="text-gray-300 text-xs xl:text-sm">น้ำมันดิบ (WTI)</p>
-            <h2 className="text-xl xl:text-2xl font-bold">{apiData.oil.price.toFixed(2)}</h2>
-            <p className={`text-xs ${apiData.oil.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {apiData.oil.change >= 0 ? '+' : ''}{apiData.oil.change.toFixed(2)} USD
+          {/* ราคาน้ำมันดิบ (Oil Price) */}
+          <div className="bg-gray-800 text-white p-4 rounded-lg shadow-sm relative overflow-hidden">
+            <div className="relative z-10">
+              <p className="text-gray-300 text-xs xl:text-sm">น้ำมันดิบ (WTI)</p>
+              <h2 className="text-xl xl:text-2xl font-bold">{apiData.oil.price.toFixed(2)}</h2>
+              <p className={`text-xs ${apiData.oil.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {apiData.oil.change >= 0 ? '+' : ''}{apiData.oil.change.toFixed(2)} USD
+              </p>
+            </div>
+            <div className="absolute top-2 right-2 text-gray-500 text-[0.6rem] text-right">
+              ความสัมพันธ์: <span className="text-green-400">แปรผันตาม</span>
+            </div>
+          </div>
+
+          {/* ปัจจัยเศรษฐกิจมหภาค (Macroeconomic) */}
+          {/* อัตราเงินเฟ้อ (Inflation) */}
+          <div className="bg-orange-50 p-4 rounded-lg shadow-sm border border-orange-100 relative">
+            <p className="text-orange-700 text-xs xl:text-sm font-semibold">อัตราเงินเฟ้อ (US CPI)</p>
+            <h2 className="text-xl xl:text-2xl font-bold text-gray-800">{apiData.macro.inflation}%</h2>
+            <p className="text-xs text-orange-600">YoY (Year-over-Year)</p>
+            <div className="absolute top-2 right-2 text-gray-500 text-[0.6rem] text-right">
+              ความสัมพันธ์: <span className="text-orange-600 font-bold">แปรผันตาม</span>
+            </div>
+          </div>
+
+          {/* ดอกเบี้ยนโยบายสหรัฐ (FED Rate) */}
+          <div className="bg-purple-50 p-4 rounded-lg shadow-sm border border-purple-100 relative">
+            <p className="text-purple-700 text-xs xl:text-sm font-semibold">ดอกเบี้ยสหรัฐ (FED Rate)</p>
+            <h2 className="text-xl xl:text-2xl font-bold text-gray-800">{apiData.macro.fed_rate}%</h2>
+            <p className="text-xs text-purple-600">อัตราดอกเบี้ยอ้างอิง</p>
+            <div className="absolute top-2 right-2 text-gray-500 text-[0.6rem] text-right">
+              ความสัมพันธ์: <span className="text-purple-600 font-bold">ผกผัน</span>
+            </div>
+          </div>
+
+          {/* ดัชนีดอลลาร์สหรัฐ (DXY) */}
+          <div className="bg-blue-50 p-4 rounded-lg shadow-sm border border-blue-100 relative">
+            <p className="text-blue-700 text-xs xl:text-sm font-semibold">ดัชนีดอลลาร์สหรัฐ (DXY)</p>
+            <h2 className="text-xl xl:text-2xl font-bold text-gray-800">{apiData.macro.dxy.value}</h2>
+            <p className={`text-xs ${apiData.macro.dxy.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {apiData.macro.dxy.change >= 0 ? '+' : ''}{apiData.macro.dxy.change}
             </p>
+            <div className="absolute top-2 right-2 text-gray-500 text-[0.6rem] text-right">
+              ความสัมพันธ์: <span className="text-blue-600 font-bold">ผกผัน</span>
+            </div>
           </div>
         </div>
 
         {/* กราฟ */}
         <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">
-            กราฟราคาทองคำตลาดโลกย้อนหลัง 30 วัน (USD)
+            กราฟราคาทองคำตลาดโลกย้อนหลัง 30 วัน (XAU/USD)
           </h3>
           <div className="h-72">
             <Line data={chartData} options={chartOptions} />

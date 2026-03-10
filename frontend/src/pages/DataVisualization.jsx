@@ -28,7 +28,7 @@ export default function DataVisualization() {
       });
   }, []);
 
-  if (loading) return <Layout activePage="visualization"><div className="flex h-screen items-center justify-center">กำลังโหลดข้อมูลกราฟเทคนิค...</div></Layout>;
+  if (loading) return <Layout activePage="visualization"><div className="flex h-screen items-center justify-center">กำลังโหลดข้อมูล...</div></Layout>;
   if (!vizData) return <Layout activePage="visualization"><div className="flex h-screen items-center justify-center text-red-500">ไม่สามารถเชื่อมต่อฐานข้อมูลได้</div></Layout>;
 
   // การตั้งค่า Options กลางสำหรับทุกกราฟ
@@ -101,10 +101,6 @@ export default function DataVisualization() {
           <div className="bg-white p-4 rounded-lg shadow-sm">
             <h3 className="font-semibold mb-2">MACD</h3>
             <div className="h-60"><Line data={macdData} options={commonOptions} /></div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <h3 className="font-semibold mb-2">Bollinger Bands</h3>
-            <div className="h-60"><Line data={bbData} options={commonOptions} /></div>
           </div>
         </div>
 

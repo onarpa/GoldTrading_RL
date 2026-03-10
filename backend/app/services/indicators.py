@@ -1,52 +1,62 @@
 import pandas as pd
-import ta
+import numpy as np
 
+# ฟังก์ชันสำหรับคำนวณและเพิ่มตัวชี้วัดทางเทคนิค (Feature Engineering)
+# เพื่อใช้เป็น State (สภาพแวดล้อม) ให้โมเดล RL เรียนรู้
 def add_technical_indicators(df):
-    """
-    เพิ่มตัวชี้วัดทางเทคนิค (Technical Indicators) ตามขอบเขตงานวิจัยข้อ 1.3.3
-    เพื่อสร้าง State Space ให้กับโมเดล Reinforcement Learning
-    """
-    df = df.copy()
-    
-    # 1. Trend Indicators (ตัวชี้วัดแนวโน้ม)
-    # EMA (Exponential Moving Average) 20 วัน และ 50 วัน
-    df['EMA_20'] = ta.trend.ema_indicator(close=df['Close'], window=20)
-    df['EMA_50'] = ta.trend.ema_indicator(close=df['Close'], window=50)
-    
-    # MACD (Moving Average Convergence Divergence)
-    macd = ta.trend.MACD(close=df['Close'], window_slow=26, window_fast=12, window_sign=9)
-    df['MACD'] = macd.macd()
-    df['MACD_Signal'] = macd.macd_signal()
-    df['MACD_Diff'] = macd.macd_diff()
-    
-    # 2. Momentum Indicators (ตัวชี้วัดโมเมนตัม)
-    # RSI (Relative Strength Index) 14 วัน
-    df['RSI'] = ta.momentum.rsi(close=df['Close'], window=14)
-    
-    # 3. Volatility Indicators (ตัวชี้วัดความผันผวน)
-    # Bollinger Bands 20 วัน
-    bollinger = ta.volatility.BollingerBands(close=df['Close'], window=20, window_dev=2)
-    df['BB_High'] = bollinger.bollinger_hband()
-    df['BB_Low'] = bollinger.bollinger_lband()
-    df['BB_Mid'] = bollinger.bollinger_mavg()
-    
-    # ลบแถวที่มีค่า NaN ทิ้ง (การคำนวณย้อนหลัง เช่น EMA 50 วัน จะทำให้ 50 วันแรกไม่มีค่า)
-    df.dropna(inplace=True)
-    
-    return df
+    data = df.copy()
 
-# บล็อกสำหรับทดสอบรันไฟล์นี้โดยตรง
+    # ตรวจสอบว่ามีข้อมูลเพียงพอต่อการคำนวณหรือไม่ (อย่างน้อยต้องมากกว่า 50 แท่งเทียน สำหรับ EMA50)
+    if len(data) < 50:
+        print("คำเตือน: ข้อมูลน้อยเกินไปสำหรับการคำนวณ Indicator บางตัว")
+        return data
+
+    # 1. Trend & Reversal (MACD และ EMA)
+    # Exponential Moving Average (EMA) ระยะสั้นและระยะกลาง
+    data['EMA_20'] = data['Close'].ewm(span=20, adjust=False).mean()
+    data['EMA_50'] = data['Close'].ewm(span=50, adjust=False).mean()
+
+    # MACD (Moving Average Convergence Divergence)
+    ema_12 = data['Close'].ewm(span=12, adjust=False).mean()
+    ema_26 = data['Close'].ewm(span=26, adjust=False).mean()
+    data['MACD'] = ema_12 - ema_26
+    data['MACD_Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
+    data['MACD_Diff'] = data['MACD'] - data['MACD_Signal'] # ส่วนที่เป็นกราฟแท่ง (Histogram)
+
+    # 2. Momentum & Volatility (RSI และ Bollinger Bands)
+    # RSI (Relative Strength Index) 14 แท่งเทียน
+    delta = data['Close'].diff()
+    gain = delta.clip(lower=0).ewm(alpha=1/14, min_periods=14, adjust=False).mean()
+    loss = -delta.clip(upper=0).ewm(alpha=1/14, min_periods=14, adjust=False).mean()
+    rs = gain / loss
+    data['RSI'] = 100 - (100 / (1.0 + rs))
+
+    # Bollinger Bands (BOLL) อิงจาก SMA 20 และค่าเบี่ยงเบนมาตรฐาน (SD) 2 เท่า
+    data['BOLL_Mid'] = data['Close'].rolling(window=20).mean()
+    std_20 = data['Close'].rolling(window=20).std()
+    data['BOLL_Upper'] = data['BOLL_Mid'] + (std_20 * 2)
+    data['BOLL_Lower'] = data['BOLL_Mid'] - (std_20 * 2)
+
+    # 3. Volume & Trend (VOL และ MA)
+    # Moving Average (SMA) แบบปกติ
+    data['MA_20'] = data['Close'].rolling(window=20).mean()
+    
+    # MA ของปริมาณการซื้อขาย (Volume Moving Average) ดูแนวโน้มแรงซื้อขายสะสม
+    data['VOL_MA_20'] = data['Volume'].rolling(window=20).mean()
+
+    # 4. ล้างข้อมูลส่วนที่คำนวณไม่ได้ (NaN) ออก
+    # ข้อมูลช่วง 50 แท่งเทียนแรกจะเป็น NaN เพราะใช้คำนวณค่าเฉลี่ยย้อนหลังไม่ได้ จึงต้องดรอปทิ้ง
+    data.dropna(inplace=True)
+    data.reset_index(drop=True, inplace=True)
+
+    return data
+
 if __name__ == "__main__":
-    from data_fetcher import fetch_historical_data
-    
-    # ดึงข้อมูลดิบมาทดสอบ
-    raw_df = fetch_historical_data(start_date="2005-01-01", end_date="2025-12-31")
-    
-    print("\nกำลังคำนวณ Technical Indicators...")
-    df_with_indicators = add_technical_indicators(raw_df)
-    
-    print(f"คำนวณสำเร็จ! จำนวนข้อมูลพร้อมเทรน AI: {len(df_with_indicators)} วัน")
-    print("\nคอลัมน์ทั้งหมดที่ AI จะมองเห็น (State Space):")
-    print(df_with_indicators.columns.tolist())
-    print("\nตัวอย่างข้อมูล 5 วันล่าสุด (เฉพาะบางคอลัมน์):")
-    print(df_with_indicators[['Close', 'Oil_Price', 'RSI', 'MACD', 'EMA_20']].tail())
+    from data_fetcher import fetch_live_hourly_data
+    print("กำลังดึงข้อมูลดิบเพื่อทดสอบ Indicator...")
+    raw_df = fetch_live_hourly_data(days_back=10) # ดึงเผื่อไว้ 10 วันเพื่อให้พอคำนวณ EMA50
+    if not raw_df.empty:
+        processed_df = add_technical_indicators(raw_df)
+        print("\nผลลัพธ์ข้อมูลหลังทำ Feature Engineering (5 แท่งเทียนล่าสุด):")
+        cols_to_show = ['Close', 'MACD', 'RSI', 'BOLL_Upper', 'BOLL_Lower', 'EMA_20', 'VOL_MA_20']
+        print(processed_df[cols_to_show].tail())

@@ -10,7 +10,7 @@ def train_ppo_model():
     raw_df = fetch_historical_data(start_date="2005-01-01", end_date="2025-12-31")
     df_features = add_technical_indicators(raw_df)
 
-    # 2. แบ่งข้อมูล Train (80%) และ Test (20%) เพื่อไม่ให้ AI จำข้อสอบ
+    # 2. แบ่งข้อมูล Train (80%) และ Test (20%) 
     train_size = int(len(df_features) * 0.8)
     train_df = df_features.iloc[:train_size].reset_index(drop=True)
     test_df = df_features.iloc[train_size:].reset_index(drop=True)
@@ -24,16 +24,14 @@ def train_ppo_model():
 
     # 4. เริ่มสร้างและฝึกสอนโมเดล PPO
     print("\n3. เริ่มสร้างและฝึกสอนโมเดล PPO (AI กำลังเรียนรู้)...")
-    # ใช้ MlpPolicy (Multi-Layer Perceptron) เหมาะกับข้อมูลตัวเลขแบบตาราง
+    # MlpPolicy (Multi-Layer Perceptron) 
     model = PPO("MlpPolicy", env, verbose=1, learning_rate=0.0003)
 
     # สั่งให้ AI เดินทดลองเทรด 50,000 ก้าว (วัน)
-    # หมายเหตุ: สำหรับงานวิจัยจริงอาจจะต้องตั้งค่าตรงนี้เป็น 100,000 - 500,000 ก้าว
     model.learn(total_timesteps=50000)
 
-    # 5. บันทึกสมอง AI (Save Model)
+    # 5. Save Model
     print("\n4. กำลังบันทึกสมอง AI...")
-    # สร้างโฟลเดอร์ models รอไว้เลยถ้ายังไม่มี
     model_dir = os.path.join(os.path.dirname(__file__), "..", "models")
     os.makedirs(model_dir, exist_ok=True)
     
@@ -54,7 +52,6 @@ def train_ppo_model():
 
         action_name = ["HOLD", "BUY", "SELL"][action]
         
-        # ปริ้นท์ผลงานของ AI
         print(f"วันที่ {step+1:02d} | AI ตัดสินใจ: {action_name:<4} | กำไร/ขาดทุนรอบนี้: {reward:>6.2f} USD | พอร์ตสะสม: {info['net_worth']:.2f} USD")
 
 if __name__ == "__main__":

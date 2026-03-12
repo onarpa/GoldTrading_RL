@@ -1,0 +1,47 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: TS_backend_v23
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ALPHA_VANTAGE_API_KEY_GOLD=${ALPHA_VANTAGE_API_KEY_GOLD:-demo}
+      - ALPHA_VANTAGE_API_KEY_OIL=${ALPHA_VANTAGE_API_KEY_OIL:-demo}
+      - DATABASE_URL=sqlite:///./database/gold_trading.db
+      - MODEL_PATH=./RL_model/best_model_ppo_1M_oil_medRisk_noSeed.zip
+      - MODEL_VERSION=oil_1M
+      - MODEL_OBS_DIM=14
+      - SEED_GOLD_CSV=./data/XAU_1h_data.csv
+      - SEED_OIL_CSV=./data/crude-oil-price.csv
+      - PRICE_FETCH_INTERVAL_HOURS=1
+      - RETRAIN_INTERVAL_DAYS=30
+      - DEBUG=false
+    volumes:
+      - ./backend/database:/app/database
+      - ./backend/RL_model:/app/RL_model
+      - ./backend/data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: TS_frontend_v23
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - VITE_API_URL=http://backend:8000

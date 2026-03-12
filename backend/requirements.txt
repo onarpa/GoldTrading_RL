@@ -1,4 +1,20 @@
-fastapi[standard]
-pydantic
-sqlmodel
-dotenv
+# ── Web framework ─────────────────────────────────────────────────────────────
+fastapi[standard]==0.115.0
+uvicorn[standard]==0.30.6
+sqlmodel==0.0.21
+pydantic-settings==2.4.0
+httpx==0.27.2
+apscheduler==3.10.4
+python-dotenv==1.0.1
+
+# ── Data / ML ─────────────────────────────────────────────────────────────────
+# numpy 2.x — model ถูก save ด้วย numpy 2.x (มี numpy._core)
+# numpy 1.x จะ error: No module named 'numpy._core.numeric'
+numpy==2.1.3
+pandas==2.2.2
+scikit-learn==1.5.1
+
+# ── RL (stable-baselines3 + PyTorch CPU) ──────────────────────────────────────
+stable-baselines3==2.3.2
+gymnasium==0.29.1
+shimmy>=0.2.1
